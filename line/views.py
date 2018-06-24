@@ -283,25 +283,6 @@ def callback(request):
                 )
                 return reply
 
-
-                # actions = [ PostbackTemplateAction(label=type.name, data=type.data) for type in types ]
-                #
-                # reply = line_bot_api.reply_message(
-                #     event.reply_token,
-                #     [
-                #         TextSendMessage(),
-                #         TemplateSendMessage(
-                #             alt_text='タイプを選択',
-                #             template=ButtonsTemplate(
-                #                 title='タイプを選択',
-                #                 text='選択してください',
-                #                 actions=actions
-                #             )
-                #         )
-                #     ]
-                # )
-                # return reply
-
             def _item_select_prompter():
                 items, text1 = _item_date_checker()
 
