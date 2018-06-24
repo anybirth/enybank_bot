@@ -1,5 +1,7 @@
 import os
 import uuid
+import json
+import requests
 import logging
 from datetime import date, datetime, timedelta
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
@@ -71,14 +73,19 @@ def callback(request):
             line_user, _ = models.LINEUser.objects.get_or_create(line_id=line_id)
             all_reservations = models.Reservation.objects.order_by('-created_at')
             reservations = all_reservations.filter(line_user=line_user).order_by('-created_at')
+            reservation = None
 
             line_ids = []
-            for reservation in all_reservations:
+            for r in all_reservations:
                 line_ids.append(reservation.line_user.line_id)
 
             has_created = line_id in line_ids
             if has_created == True:
                 reservation = models.Reservation.objects.filter(line_user=line_user).order_by('-created_at')[0]
+
+            url = "https://api.line.me/v2/bot/user/%s/richmenu/%s" % (line_id, settings.LINE_RICH_MENU_ID)
+            headers = {"Authorization": "Bearer {%s}" % settings.LINE_CHANNEL_ACCESS_TOKEN}
+            requests.post(url, headers=headers, verify=True).json()
 
 
 
@@ -829,6 +836,18 @@ def callback(request):
                         reservation_selected = reservations.get(uuid=event.postback.data)
                         _remodification_prompter()
 
+            def _rich_menu_reciever():
+                if event.postback.data == 'quit':
+                    if reservation:
+                        if reservation.status:
+                            reservation.status = 99
+                            reservation.save()
+                            _delete_prompter()
+                        else:
+                            _text_message('現在行っている操作はありません\nリッチメニューから操作を選んでください')
+                    else:
+                        _text_message('現在行っている操作はありません\nリッチメニューから操作を選んでください')
+
             def _start_date_reciever(next_status, func, check=False, **kwargs):
                 if isinstance(event, PostbackEvent):
                     if event.postback.data == 'start_date':
@@ -1145,6 +1164,9 @@ def callback(request):
 
             if isinstance(event, FollowEvent):
                 _thanks_for_following()
+
+            if isinstance(event, PostbackEvent):
+                _rich_menu_reciever()
 
             if has_created == False:
                 _thanks_for_using()
