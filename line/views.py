@@ -18,7 +18,7 @@ from main import models
 
 POSTAGE = 0
 
-THANKS_FOR_FOLLOWING = 'いつもご利用ありがとうございます！\n'\
+THANKS_FOR_FOLLOWING = '友達追加ありがとうございます！\n'\
 + 'enyfarは、スーツケースを格安でレンタルすることができるサービスです\n'\
 + 'お支払い以外の手続きを、すべてこのLINEトークルームで完結させることができます\n\n'\
 + '下のボタンから、したい操作を選んでください'
@@ -422,7 +422,7 @@ def callback(request):
                                 text='日にちを追加しますか？',
                                 actions=[
                                     PostbackTemplateAction(label='前に1日 (+{}円)'.format(add_one_days), data='add_before'),
-                                    PostbackTemplateAction(label='後ろに1日 (+{}円)'.format(add_two_days), data='add_after'),
+                                    PostbackTemplateAction(label='後ろに1日 (+{}円)'.format(add_one_days), data='add_after'),
                                     PostbackTemplateAction(label='前後に1日ずつ (+{}円)'.format(add_one_days + add_two_days), data='add_both'),
                                     PostbackTemplateAction(label='追加しない', data='not_add')
                                 ]
