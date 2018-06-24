@@ -106,13 +106,14 @@ def callback(request):
 
                 return items, text
 
-            def _fee_calculator(item):
+            def _fee_calculator(item, days=None):
                 intercept = item.fee_intercept
                 coefs = item.item_fee_coef_set.order_by('starting_point')
                 fee = intercept
 
-                delta = reservation.return_date - reservation.start_date
-                days = delta.days + 1
+                if not days:
+                    delta = reservation.return_date - reservation.start_date
+                    days = delta.days + 1
 
                 for coef in coefs:
                     fee_coef = coef.fee_coef
@@ -142,7 +143,7 @@ def callback(request):
                 )
                 return reply
 
-            def _date_prompter(text1, text2, data, min, max):
+            def _date_prompter(text1, text2, data, arg, min, max):
                 reply = line_bot_api.reply_message(
                     event.reply_token,
                     [
@@ -157,7 +158,7 @@ def callback(request):
                                         label='選択',
                                         data=data,
                                         mode='date',
-                                        initial=min,
+                                        initial=arg,
                                         min=min,
                                         max=max
                                     )
@@ -168,22 +169,37 @@ def callback(request):
                 )
                 return reply
 
-            def _start_date_prompter():
-                reply = _date_prompter(SELECT_START_DATE, SELECT_START_DATE, 'start_date', '2018-08-01', '2019-08-01')
+            def _start_date_prompter(arg='2018-08-01'):
+                min = '2018-08-01'
+                max = '2019-07-30'
+
+                if datetime.strptime(arg, '%Y-%m-%d') < datetime.strptime('2018-08-01', '%Y-%m-%d'):
+                    min = arg
+                reply = _date_prompter(SELECT_START_DATE, SELECT_START_DATE, 'start_date', arg, min, max)
                 return reply
 
-            def _return_date_prompter(check=None):
+            def _return_date_prompter(arg=None, check=False):
                 start_date_check = '開始日は {}年{}月{}日 ですね\n\n次は、'.format(reservation.start_date.year, reservation.start_date.month, reservation.start_date.day)
                 text1 = text2 = SELECT_RETURN_DATE
                 if check:
                     text1 = start_date_check + text1
 
                 min = reservation.start_date + timedelta(days=1)
-                max = reservation.start_date + timedelta(days=365)
-                reply = _date_prompter(text1, text2, 'return_date', min.strftime('%Y-%m-%d'), max.strftime('%Y-%m-%d'))
+                min = min.strftime('%Y-%m-%d')
+                max = '2019-07-31'
+
+                if arg:
+                    if reservation.return_date <= reservation.start_date - 1:
+                        arg = min
+                    else:
+                        pass
+                else:
+                    arg = min
+
+                reply = _date_prompter(text1, text2, 'return_date', arg, min, max)
                 return reply
 
-            def _size_prompter(check=None):
+            def _size_prompter(check=False):
 
                 delta = reservation.return_date - reservation.start_date
                 days = delta.days + 1
@@ -194,10 +210,10 @@ def callback(request):
                 for size in sizes:
                     min = size.min_days
                     max = size.max_days
-                    if min and max:
+                    if max:
                         if min <= days < max:
                             recommendation = size.name
-                    elif min and not max:
+                    elif not max:
                         if min <= days:
                             recommendation = size.name
 
@@ -222,7 +238,7 @@ def callback(request):
                 )
                 return reply
 
-            def _type_prompter(check=None):
+            def _type_prompter(check=False):
                 size_check = '{}サイズですね\n\n次は、'.format(reservation.size)
                 text = 'スーツケースの鍵・明け口のタイプを選択してください'
                 if check:
@@ -323,11 +339,11 @@ def callback(request):
                 text1 = '商品の詳細です\n'\
                 + 'こちらの商品でよろしいですか？'
                 text2 = '【商品詳細】\n\n'\
-                + '商品名：{}\n'.format(item.name)\
-                + 'ブランド{}\n'.format(item.bland)\
-                + '容量：{}L ({})\n'.format(item.capacity, item.size)\
-                + 'タイプ：{}\n'.format(item.type)\
-                + 'カラー：{}\n'.format(item.color)\
+                + '商品名：{}\n\n'.format(item.name)\
+                + 'ブランド{}\n\n'.format(item.bland)\
+                + '容量：{}L ({})\n\n'.format(item.capacity, item.size)\
+                + 'タイプ：{}\n\n'.format(item.type)\
+                + 'カラー：{}\n\n'.format(item.color)\
                 + '料金（送料を含む）：￥{}'.format(_fee_calculator(item))
                 item_images = item.item_image_set.order_by('order')
 
@@ -374,13 +390,52 @@ def callback(request):
                 )
                 return reply
 
-            def _registration_prompter():
+            def _date_adding_prompter():
+
+                delta = reservation.return_date - reservation.start_date
+                days = delta.days + 1
+
+                item = reservation.item
+                add_one_days =  _fee_calculator(item, days+1) - _fee_calculator(item, days)
+                add_two_days =  _fee_calculator(item, days+2) - _fee_calculator(item, days+1)
+
+                text = '商品を保存しました\n\n'\
+                + '現在{}日間で予約されていますが、余裕をもって準備・返却するために、たった{}円でレンタル日数を1日増やすことができます\n'.format(days, add_one_days, add_two_days)\
+                + '日数をプラスしますか？'
+
+                reply = line_bot_api.reply_message(
+                    event.reply_token,
+                    [
+                        TextSendMessage(text),
+                        TemplateSendMessage(
+                            alt_text='サイズを選択',
+                            template=ButtonsTemplate(
+                                title='日にちを追加',
+                                text='日にちを追加しますか？',
+                                actions=[
+                                    PostbackTemplateAction(label='前に1日 (+{}円)'.format(add_one_days), data='add_before'),
+                                    PostbackTemplateAction(label='後ろに1日 (+{}円)'.format(add_two_days), data='add_after'),
+                                    PostbackTemplateAction(label='前後に1日ずつ (+{}円)'.format(add_one_days + add_two_days), data='add_both'),
+                                    PostbackTemplateAction(label='追加しない', data='not_add')
+                                ]
+                            )
+                        )
+                    ]
+                )
+                return reply
+
+            def _registration_prompter(check=False):
                 text = '次のお届け先が保存されています\n'\
                 + 'このお届け先を使用しますか？\n\n'\
                 + '【お届け先情報】\n'\
                 + '〒{}\n'.format(line_user.zip_code)\
                 + '{}\n'.format(line_user.address)\
                 + 'お名前：{}\n'.format(line_user.name)
+
+                if check:
+                    text = 'レンタル日数を追加しました\n\n' + text
+
+
                 reply = line_bot_api.reply_message(
                     event.reply_token,
                     [
@@ -405,7 +460,7 @@ def callback(request):
                 )
                 return reply
 
-            def _check_prompter():
+            def _check_prompter(check=False):
                 text = '項目の入力が完了しました\n'\
                 + '予約内容は以下の通りです\n\n'\
                 + '【予約内容】\n'\
@@ -424,6 +479,9 @@ def callback(request):
                 + 'タイプ：{}\n'.format(reservation.item.type)\
                 + 'カラー：{}\n\n'.format(reservation.item.color)\
                 + 'この内容で予約を確定する場合は「確定」、予約内容を修正する場合は「修正」、予約を中止する場合は「中止」を押してください'
+
+                if check:
+                    text = 'レンタル日数を追加しました\n\n' + text
 
                 reply = line_bot_api.reply_message(
                     event.reply_token,
@@ -771,7 +829,7 @@ def callback(request):
                         reservation_selected = reservations.get(uuid=event.postback.data)
                         _remodification_prompter()
 
-            def _start_date_reciever(next_status, func, check=None, **kwargs):
+            def _start_date_reciever(next_status, func, check=False, **kwargs):
                 if isinstance(event, PostbackEvent):
                     if event.postback.data == 'start_date':
                         reservation.start_date = datetime.strptime(event.postback.params['date'], '%Y-%m-%d').date()
@@ -783,12 +841,12 @@ def callback(request):
                             except TypeError:
                                 func(arg=kwargs['arg'], check=check)
                         else:
-                            try:
-                                func()
-                            except TypeError:
+                            if 'arg' in kwargs:
                                 func(arg=kwargs['arg'])
+                            else:
+                                func()
 
-            def _return_date_reciever(next_status, func, check=None, **kwargs):
+            def _return_date_reciever(next_status, func, check=False, **kwargs):
                 if isinstance(event, PostbackEvent):
                     if event.postback.data == 'return_date':
                         reservation.return_date = datetime.strptime(event.postback.params['date'], '%Y-%m-%d').date()
@@ -805,13 +863,13 @@ def callback(request):
                             except TypeError:
                                 func(arg=kwargs['arg'], check=check)
                         else:
-                            try:
-                                func()
-                            except TypeError:
+                            if 'arg' in kwargs:
                                 func(arg=kwargs['arg'])
+                            else:
+                                func()
 
 
-            def _size_reciever(next_status, func, check=None, **kwargs):
+            def _size_reciever(next_status, func, check=False, **kwargs):
                 if isinstance(event, PostbackEvent):
                     data = models.Size.objects.all().values_list('data', flat=True)
                     if event.postback.data in data:
@@ -824,10 +882,10 @@ def callback(request):
                             except TypeError:
                                 func(arg=kwargs['arg'], check=check)
                         else:
-                            try:
-                                func()
-                            except TypeError:
+                            if 'arg' in kwargs:
                                 func(arg=kwargs['arg'])
+                            else:
+                                func()
 
                 if isinstance(event, MessageEvent):
                     if isinstance(event.message, TextMessage):
@@ -836,10 +894,10 @@ def callback(request):
                             reservation.size = models.Size.objects.get(name=event.message.text)
                             reservation.status = next_status
                             reservation.save()
-                            try:
-                                func()
-                            except TypeError:
+                            if 'arg' in kwargs:
                                 func(arg=kwargs['arg'])
+                            else:
+                                func()
 
             def _type_reciever(next_status, func, **kwargs):
                 if isinstance(event, PostbackEvent):
@@ -848,10 +906,10 @@ def callback(request):
                         reservation.type = models.Type.objects.get(data=event.postback.data)
                         reservation.status = next_status
                         reservation.save()
-                        try:
-                            func()
-                        except TypeError:
+                        if 'arg' in kwargs:
                             func(arg=kwargs['arg'])
+                        else:
+                            func()
 
                 if isinstance(event, MessageEvent):
                     if isinstance(event.message, TextMessage):
@@ -860,10 +918,10 @@ def callback(request):
                             reservation.type = models.Type.objects.get(name=event.message.text)
                             reservation.status = next_status
                             reservation.save()
-                            try:
-                                func()
-                            except TypeError:
+                            if 'arg' in kwargs:
                                 func(arg=kwargs['arg'])
+                            else:
+                                func()
 
             def _item_select_reciever(next_status, func, **kwargs):
                 if isinstance(event, PostbackEvent):
@@ -871,10 +929,10 @@ def callback(request):
                     if event.postback.data in data:
                         reservation.status = next_status
                         reservation.save()
-                        try:
-                            func()
-                        except TypeError:
+                        if 'arg' in kwargs:
                             func(arg=kwargs['arg'])
+                        else:
+                            func()
 
             def _item_decision_reciever(next_status, func, prompt_default=False, **kwargs):
                 if isinstance(event, PostbackEvent):
@@ -893,17 +951,58 @@ def callback(request):
                         else:
                             reservation.status = next_status[0]
                             reservation.save()
-                            try:
+                            if 'arg' in kwargs:
+                                if kwargs['arg'][0]:
+                                    func[0](arg=kwargs['arg'][0])
+                                else:
+                                    func[0]()
+                            else:
                                 func[0]()
-                            except TypeError:
-                                func[0](kwargs['arg'][0])
                     elif event.postback.data == 'not_choose':
                         reservation.status = next_status[1]
                         reservation.save()
-                        try:
+                        if 'arg' in kwargs:
+                            if kwargs['arg'][1]:
+                                func[1](arg=kwargs['arg'][1])
+                            else:
+                                func[1]()
+                        else:
                             func[1]()
-                        except TypeError:
-                            func[1](kwargs['arg'][1])
+
+            def _date_adding_reciever(next_status, func, check=False, prompt_default=False, **kwargs):
+                if isinstance(event, PostbackEvent):
+                    if event.postback.data == 'add_both':
+                        reservation.start_date = reservation.start_date - timedelta(days=1)
+                        reservation.return_date = reservation.return_date + timedelta(days=1)
+                    elif event.postback.data == 'add_before':
+                        reservation.start_date = reservation.start_date - timedelta(days=1)
+                    elif event.postback.data == 'add_after':
+                        reservation.return_date = reservation.return_date + timedelta(days=1)
+                    elif event.postback.data == 'not_add':
+                        pass
+                    reservation.item_fee = _fee_calculator(item=reservation.item)
+                    reservation.total_fee = reservation.item_fee + reservation.postage
+
+                    if prompt_default and line_user.zip_code and line_user.address and line_user.name:
+                        reservation.status = 11
+                        reservation.save()
+                        if check:
+                            _registration_prompter(check=True)
+                        else:
+                            _registration_prompter()
+                    else:
+                        reservation.status = next_status
+                        reservation.save()
+                        if check:
+                            try:
+                                func(check=check)
+                            except TypeError:
+                                func(arg=kwargs['arg'], check=check)
+                        else:
+                            if 'arg' in kwargs:
+                                func(arg=kwargs['arg'])
+                            else:
+                                func()
 
                 if isinstance(event, MessageEvent):
                     if isinstance(event.message, TextMessage):
@@ -922,17 +1021,23 @@ def callback(request):
                             else:
                                 reservation.status = next_status[0]
                                 reservation.save()
-                                try:
+                                if 'arg' in kwargs:
+                                    if kwargs['arg'][0]:
+                                        func[0](arg=kwargs['arg'][0])
+                                    else:
+                                        func[0]()
+                                else:
                                     func[0]()
-                                except TypeError:
-                                    func[0](kwargs['arg'][0])
                         elif event.message.text == 'いいえ':
                             reservation.status = next_status2
                             reservation.save()
-                            try:
+                            if 'arg' in kwargs:
+                                if kwargs['arg'][1]:
+                                    func[1](arg=kwargs['arg'][1])
+                                else:
+                                    func[1]()
+                            else:
                                 func[1]()
-                            except TypeError:
-                                func[1](kwargs['arg'][1])
 
             def _zip_code_reciever(next_status, func, **kwargs):
                 if isinstance(event, MessageEvent):
@@ -943,10 +1048,10 @@ def callback(request):
                             reservation.status = next_status
                             reservation.save()
                             line_user.save()
-                            try:
-                                func()
-                            except TypeError:
+                            if 'arg' in kwargs:
                                 func(arg=kwargs['arg'])
+                            else:
+                                func()
                         elif len(text) == 7 and text.isdecimal() and not text.encode('utf-8').isalnum():
                             _text_message('半角で入力してください')
                         elif len(text) == 8 and text.find('-') == 3:
@@ -961,10 +1066,10 @@ def callback(request):
                         reservation.status = next_status
                         reservation.save()
                         line_user.save()
-                        try:
-                            func()
-                        except TypeError:
+                        if 'arg' in kwargs:
                             func(arg=kwargs['arg'])
+                        else:
+                            func()
 
             def _name_reciever(next_status, func, **kwargs):
                 if isinstance(event, MessageEvent):
@@ -973,10 +1078,10 @@ def callback(request):
                         reservation.status = next_status
                         reservation.save()
                         line_user.save()
-                        try:
-                            func()
-                        except TypeError:
+                        if 'arg' in kwargs:
                             func(arg=kwargs['arg'])
+                        else:
+                            func()
 
             def _using_default_reciever(**kwargs):
                 if isinstance(event, PostbackEvent):
@@ -1016,10 +1121,13 @@ def callback(request):
                         if event.postback.data == data[i]:
                             reservation.status = next_status[i]
                             reservation.save()
-                            try:
+                            if 'arg' in kwargs:
+                                if kwargs['arg'][i]:
+                                    func[i](arg=kwargs['arg'][i])
+                                else:
+                                    func[i]()
+                            else:
                                 func[i]()
-                            except TypeError:
-                                func[i](arg=kwargs['arg'][i])
 
             def _delete_reciever():
                 if isinstance(event, PostbackEvent):
@@ -1061,15 +1169,18 @@ def callback(request):
                     _item_select_reciever(next_status=6, func=_item_decision_prompter, arg=event.postback.data)
 
                 elif reservation.status == 6:
-                    _item_decision_reciever(next_status=(7, 21), func=(_text_message, _item_modification_prompter), arg=(INPUT_ZIP_CODE, None), prompt_default=True)
+                    _item_decision_reciever(next_status=(7, 21), func=(_date_adding_prompter, _item_modification_prompter))
 
                 elif reservation.status == 7:
-                    _zip_code_reciever(next_status=8, func=_text_message, arg=INPUT_ADDRESS)
+                    _date_adding_reciever(next_status=8, func=_text_message, arg='レンタル日数を追加しました\n\n' + INPUT_ZIP_CODE, prompt_default=True)
 
                 elif reservation.status == 8:
-                    _address_reciever(next_status=9, func=_text_message, arg=INPUT_NAME)
+                    _zip_code_reciever(next_status=9, func=_text_message, arg=INPUT_ADDRESS)
 
                 elif reservation.status == 9:
+                    _address_reciever(next_status=10, func=_text_message, arg=INPUT_NAME)
+
+                elif reservation.status == 10:
                     _name_reciever(next_status=91, func=_check_prompter)
 
 
@@ -1077,7 +1188,7 @@ def callback(request):
                     _using_default_reciever()
 
                 elif reservation.status == 12:
-                    _zip_code_reciever(next_status=8, func=_text_message, arg=INPUT_ADDRESS)
+                    _zip_code_reciever(next_status=9, func=_text_message, arg=INPUT_ADDRESS)
 
 
                 elif reservation.status == 21:
@@ -1096,11 +1207,11 @@ def callback(request):
                     _item_select_reciever(next_status=26, func=_item_decision_prompter, arg=event.postback.data)
 
                 elif reservation.status == 26:
-                    _item_decision_reciever(next_status=(7, 21), func=(_text_message, _item_modification_prompter), arg=(INPUT_ZIP_CODE, None), prompt_default=True)
+                    _item_decision_reciever(next_status=(7, 21), func=(_date_adding_prompter, _item_modification_prompter))
 
 
                 elif reservation.status == 31:
-                    _start_date_reciever(next_status=32, func=_return_date_prompter, check=True)
+                    _start_date_reciever(next_status=32, func=_return_date_prompter, arg=str(reservation.return_date), check=True)
 
                 elif reservation.status == 32:
                     _return_date_reciever(next_status=43, func=_size_prompter, check=True)
@@ -1137,7 +1248,10 @@ def callback(request):
                     _item_select_reciever(next_status=46, func=_item_decision_prompter, arg=event.postback.data)
 
                 elif reservation.status == 46:
-                    _item_decision_reciever(next_status=(91, 94), func=(_check_prompter, _item_modification_prompter))
+                    _item_decision_reciever(next_status=(47, 94), func=(_date_adding_prompter, _item_modification_prompter))
+
+                elif reservation.status == 47:
+                    _date_adding_reciever(next_status=91, func=_check_prompter, check=True)
 
 
                 elif reservation.status == 91:
@@ -1147,7 +1261,7 @@ def callback(request):
                     _register_reciever()
 
                 elif reservation.status == 93:
-                    _postback_reciever( next_status=(31, 94, 96), func=(_start_date_prompter, _item_modification_prompter, _destination_modification_prompter), data=('modify_rental_period', 'modify_item', 'modify_destination'))
+                    _postback_reciever( next_status=(31, 94, 96), func=(_start_date_prompter, _item_modification_prompter, _destination_modification_prompter), data=('modify_rental_period', 'modify_item', 'modify_destination'), arg=(str(reservation.start_date), None, None))
 
                 elif reservation.status == 94:
                     _postback_reciever(next_status=(95, 35), func=(_item_condition_modification_prompter, _item_select_prompter), data=('modify_condition', 'list_item'))
