@@ -77,7 +77,7 @@ def callback(request):
 
             line_ids = []
             for r in all_reservations:
-                line_ids.append(reservation.line_user.line_id)
+                line_ids.append(r.line_user.line_id)
 
             has_created = line_id in line_ids
             if has_created == True:
@@ -156,7 +156,7 @@ def callback(request):
                     [
                         TextSendMessage(text1),
                         TemplateSendMessage(
-                            alt_text=text1,
+                            alt_text='日にちを選択してください',
                             template=ButtonsTemplate(
                                 title='選択',
                                 text=text2,
@@ -234,7 +234,7 @@ def callback(request):
                     [
                         TextSendMessage(text),
                         TemplateSendMessage(
-                            alt_text='サイズを選択',
+                            alt_text='サイズを選択してください\n{}日間のレンタルなら、{}サイズがおすすめです'.format(days, recommendation),
                             template=ButtonsTemplate(
                                 title='サイズを選択',
                                 text='{}日間のレンタルなら、{}サイズがおすすめです'.format(days, recommendation),
@@ -274,7 +274,7 @@ def callback(request):
                     [
                         TextSendMessage(text),
                         TemplateSendMessage(
-                            alt_text='タイプを選択',
+                            alt_text='スーツケースの鍵・明け口のタイプを選択してください',
                             template=CarouselTemplate(
                                 columns=columns
                             )
@@ -330,7 +330,7 @@ def callback(request):
                     [
                         TextSendMessage(text1),
                         TemplateSendMessage(
-                            alt_text='商品リスト',
+                            alt_text='商品を選択してください',
                             template=CarouselTemplate(
                                 image_aspect_ratio='square',
                                 columns=columns
@@ -378,7 +378,7 @@ def callback(request):
                         ),
                         TextSendMessage(text2),
                         TemplateSendMessage(
-                            alt_text='確認',
+                            alt_text='こちらの商品でよろしければ「はい」、別の商品を探す場合は「いいえ」を選択してください',
                             template=ConfirmTemplate(
                                 text='こちらの商品でよろしいですか？',
                                 actions=[
@@ -415,7 +415,8 @@ def callback(request):
                     [
                         TextSendMessage(text),
                         TemplateSendMessage(
-                            alt_text='サイズを選択',
+                            alt_text='現在{}日間で予約されていますが、余裕をもって準備・返却するために、たった{}円でレンタル日数を1日増やすことができます\n'.format(days, add_one_days, add_two_days)\
+                            + '日数をプラスしますか？',
                             template=ButtonsTemplate(
                                 title='日にちを追加',
                                 text='日にちを追加しますか？',
@@ -432,7 +433,7 @@ def callback(request):
                 return reply
 
             def _registration_prompter(check=False):
-                text = '次のお届け先が保存されています\n'\
+                text = '次のお届け先が以前使用されました\n'\
                 + 'このお届け先を使用しますか？\n\n'\
                 + '【お届け先情報】\n'\
                 + '〒{}\n'.format(line_user.zip_code)\
@@ -448,7 +449,7 @@ def callback(request):
                     [
                         TextSendMessage(text),
                         TemplateSendMessage(
-                            alt_text='確認',
+                            alt_text='このお届け先を使用しますか？',
                             template=ConfirmTemplate(
                                 text='保存されているお届け先を使用しますか？',
                                 actions=[
@@ -495,7 +496,7 @@ def callback(request):
                     [
                         TextSendMessage(text),
                         TemplateSendMessage(
-                            alt_text='確認',
+                            alt_text='予約を確定する場合は「確定」、予約内容を修正する場合は「修正」、予約を中止する場合は「中止」を押してください',
                             template=ButtonsTemplate(
                                 title='確認',
                                 text='予約内容を確認し、操作を選んでください',
@@ -532,7 +533,7 @@ def callback(request):
                     [
                         TextSendMessage(text),
                         TemplateSendMessage(
-                            alt_text='確認',
+                            alt_text='お届け先を保存する場合は「はい」、保存しない場合は「いいえ」を選択してください？',
                             template=ConfirmTemplate(
                                 text='次回以降、このお届け先を利用できるように保存しますか？',
                                 actions=[
@@ -556,14 +557,14 @@ def callback(request):
                 + '・レンタルする日にちを変更したい場合は「レンタル期間」\n'\
                 + '・住所・お名前・電話番号を変更したい場合は「お届け先情報」\n'\
                 + '・商品を変更したい場合は「商品」\n\n'\
-                + 'をタップするか、入力してください'
+                + 'をタップしてください'
 
                 reply = line_bot_api.reply_message(
                     event.reply_token,
                     [
                         TextSendMessage(text),
                         TemplateSendMessage(
-                            alt_text='修正',
+                            alt_text='修正したい項目をタップしてください',
                             template=ButtonsTemplate(
                                 title='修正',
                                 text='修正したい項目をタップしてください',
@@ -595,7 +596,7 @@ def callback(request):
                     [
                         TextSendMessage(text),
                         TemplateSendMessage(
-                            alt_text='アイテムを探す',
+                            alt_text='アイテムを探す方法を選択してください',
                             template=ButtonsTemplate(
                                 title='アイテムを探す',
                                 text='方法を選択してください',
@@ -619,14 +620,14 @@ def callback(request):
                 reservation.item = None
                 reservation.save()
                 text = 'どの項目を修正しますか？\n\n'\
-                + '修正したい項目ををタップするか、入力してください'
+                + '修正したい項目をタップしてください'
 
                 reply = line_bot_api.reply_message(
                     event.reply_token,
                     [
                         TextSendMessage(text),
                         TemplateSendMessage(
-                            alt_text='修正',
+                            alt_text='修正したい項目をタップしてください',
                             template=ButtonsTemplate(
                                 title='修正',
                                 text='修正したい項目をタップしてください',
@@ -648,14 +649,14 @@ def callback(request):
 
             def _destination_modification_prompter():
                 text = 'どの項目を修正しますか？\n\n'\
-                + '修正したい項目ををタップするか、入力してください'
+                + '修正したい項目をタップしてください'
 
                 reply = line_bot_api.reply_message(
                     event.reply_token,
                     [
                         TextSendMessage(text),
                         TemplateSendMessage(
-                            alt_text='修正',
+                            alt_text='修正したい項目をタップしてください',
                             template=ButtonsTemplate(
                                 title='修正',
                                 text='修正したい項目をタップしてください',
@@ -685,7 +686,7 @@ def callback(request):
                     [
                         TextSendMessage(text),
                         TemplateSendMessage(
-                            alt_text='予約を中止',
+                            alt_text='予約を中止する場合は「はい」、中止しない場合は「いいえ」を選択してください',
                             template=ConfirmTemplate(
                                 text='予約を中止しますか？この操作は取り消せません。',
                                 actions=[
@@ -735,7 +736,7 @@ def callback(request):
                     [
                         TextSendMessage(text1),
                         TemplateSendMessage(
-                            alt_text='予約リスト',
+                            alt_text='詳細を見たい予約をタップしてください',
                             template=CarouselTemplate(
                                 image_aspect_ratio='square',
                                 columns=columns
@@ -785,17 +786,17 @@ def callback(request):
                     [
                         TextSendMessage(text),
                         TemplateSendMessage(
-                            alt_text='操作',
+                            alt_text='「予約する」または「予約の確認」を選択してください',
                             template=ButtonsTemplate(
                                 title='操作',
                                 text='下のボタンを押すと次へ進みます',
                                 actions=[
                                     PostbackTemplateAction(
-                                        label='新規予約',
+                                        label='予約する',
                                         data='reservation'
                                     ),
                                     PostbackTemplateAction(
-                                        label='予約履歴',
+                                        label='予約の確認',
                                         data='reconfirmation'
                                     ),
                                 ]
