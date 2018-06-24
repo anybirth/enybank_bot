@@ -123,12 +123,12 @@ def callback(request):
                     if end_point:
                         if days <= end_point:
                             fee += fee_coef * (days - starting_point)
-                            return fee
+                            return round(fee, -1)
                         elif end_point < days:
                             fee += fee_coef * (end_point - starting_point)
                     else:
                         fee += fee_coef * (days - starting_point)
-                        return fee
+                        return round(fee, -1)
 
                 return fee
 
@@ -300,7 +300,7 @@ def callback(request):
 
                 columns = []
                 for item in items:
-                    text2 = '価格：￥{}～\n'.format(item.fee_intercept + item.item_fee_coef_set.order_by('starting_point')[0].fee_coef * 2)\
+                    text2 = '価格：￥{}～\n'.format(round(item.fee_intercept + item.item_fee_coef_set.order_by('starting_point')[0].fee_coef * 2, -1))\
                     + 'ブランド：{}\n'.format(item.bland)\
                     + 'カラー：{}'.format(item.color)
                     image = item.item_image_set.order_by('order')[0].image.url
