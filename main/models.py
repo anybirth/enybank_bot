@@ -93,7 +93,7 @@ class Item(UUIDModel):
     name = models.CharField(_('商品名'), max_length=50)
     description = models.TextField(_('備考'), blank=True)
     capacity = models.IntegerField(_('容量'))
-    is_tsa = models.BooleanField(_('TSAロック対応'))
+    is_tsa = models.BooleanField(_('TSAロック対応'), default=True)
     fee_intercept = models.IntegerField(_('料金切片'))
     created_at = models.DateTimeField(_('作成日時'), auto_now_add=True)
     updated_at = models.DateTimeField(_('更新日時'), auto_now=True)
