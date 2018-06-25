@@ -99,7 +99,7 @@ def callback(request):
                 for item in items:
                     for r in item.reservation_set.all():
                         if r.uuid != reservation.uuid and not (r.return_date + timedelta(days=1) < reservation.start_date or reservation.return_date < r.start_date - timedelta(days=1)):
-                            items = items.exclude(data=str(r.item.uuid))
+                            items = items.exclude(uuid=str(r.item.uuid))
 
                 if not len(items):
                     text = '条件に一致する商品が見つからなかったため、条件の類似した商品を表示しています\n'\
@@ -109,7 +109,7 @@ def callback(request):
                     for item in items:
                         for r in item.reservation_set.all():
                                 if r.uuid != reservation.uuid and not (r.return_date + timedelta(days=1) < reservation.start_date or reservation.return_date < r.start_date - timedelta(days=1)):
-                                    items = items.exclude(data=str(r.item.uuid))
+                                    items = items.exclude(uuid=str(r.item.uuid))
 
                 return items, text
 
