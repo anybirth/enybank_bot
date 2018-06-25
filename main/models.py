@@ -92,7 +92,7 @@ class Item(UUIDModel):
     bland = models.ForeignKey('Bland', on_delete=models.PROTECT, verbose_name=_('ブランド'))
     size = models.ForeignKey('Size', on_delete=models.PROTECT, verbose_name=_('サイズ'))
     type = models.ForeignKey('Type', on_delete=models.PROTECT, verbose_name=_('タイプ'))
-    color_category = models.ForeignKey('ColorCategory', on_delete=models.PROTECT, verbose_name=_('カラー分類'), related_name='color_category_set')
+    color_category = models.ForeignKey('ColorCategory', on_delete=models.PROTECT, verbose_name=_('カラー分類'))
     color = models.CharField(_('カラー'), max_length=50)
     name = models.CharField(_('商品名'), max_length=50)
     description = models.TextField(_('備考'), blank=True)
