@@ -20,7 +20,6 @@ class UUIDModel(models.Model):
 
 class Size(UUIDModel):
     name = models.CharField(_('サイズ名'), max_length=50)
-    data = models.CharField(_('データ'), max_length=50, unique=True)
     description = models.TextField(_('備考'), blank=True)
     min_days = models.SmallIntegerField(_('最小日数'))
     max_days = models.SmallIntegerField(_('最大日数'), blank=True, null=True)
@@ -43,7 +42,6 @@ class Type(UUIDModel):
         return prefix + path
 
     name = models.CharField(_('タイプ名'), max_length=50)
-    data = models.CharField(_('データ'), max_length=50, unique=True)
     description = models.TextField(_('備考'), blank=True)
     image = models.ImageField(upload_to=_get_image_path, verbose_name=_('画像'))
     created_at = models.DateTimeField(_('作成日時'), auto_now_add=True)
@@ -59,7 +57,6 @@ class Type(UUIDModel):
 
 class ColorCategory(UUIDModel):
     name = models.CharField(_('カラー分類名'), max_length=50)
-    data = models.CharField(_('データ'), max_length=50, unique=True)
     description = models.TextField(_('備考'), blank=True)
     code = models.CharField(_('カラーコード'), max_length=50)
     created_at = models.DateTimeField(_('作成日時'), auto_now_add=True)
@@ -75,7 +72,6 @@ class ColorCategory(UUIDModel):
 
 class Bland(UUIDModel):
     name = models.CharField(_('ブランド名'), max_length=50)
-    data = models.CharField(_('データ'), max_length=50, unique=True)
     description = models.TextField(_('備考'), blank=True)
     created_at = models.DateTimeField(_('作成日時'), auto_now_add=True)
     updated_at = models.DateTimeField(_('更新日時'), auto_now=True)
@@ -95,7 +91,6 @@ class Item(UUIDModel):
     color_category = models.ForeignKey('ColorCategory', on_delete=models.PROTECT, verbose_name=_('カラー分類'), related_name='color_category_set')
     color = models.CharField(_('カラー'), max_length=50)
     name = models.CharField(_('商品名'), max_length=50)
-    data = models.CharField(_('データ'), max_length=50, unique=True)
     description = models.TextField(_('備考'), blank=True)
     capacity = models.IntegerField(_('容量'))
     is_tsa = models.BooleanField(_('TSAロック対応'))
