@@ -112,6 +112,10 @@ class Item(UUIDModel):
         return '%s' % self.name
 
     def save(self, *args, **kwargs):
+        two_days_fee = self.fee_intercept + round((self.fee_intercept / .6) * .2, -1) * 2
+        postage = 2860
+        if two_days_fee <= postage and self.capacity <= 40:
+            self.fee_intercept = postage - round(postage * .2, -1) * 2
         super().save(*args, **kwargs)
         ItemFeeCoef.objects.filter(item=self).delete()
         self.item_fee_coef_set.get_or_create(
