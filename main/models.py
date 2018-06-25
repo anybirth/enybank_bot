@@ -111,6 +111,24 @@ class Item(UUIDModel):
     def __str__(self):
         return '%s' % self.name
 
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        ItemFeeCoef.objects.filter(item=self).delete()
+        self.item_fee_coef_set.get_or_create(
+            fee_coef=round((self.fee_intercept / .6) * .2, -1),
+            starting_point=0,
+            end_point=3
+        )
+        self.item_fee_coef_set.get_or_create(
+            fee_coef=round((self.fee_intercept / .6) * .15, -1),
+            starting_point=3,
+            end_point=5
+        )
+        self.item_fee_coef_set.get_or_create(
+            fee_coef=round((self.fee_intercept / .6) * .13, -1),
+            starting_point=5
+        )
+
 class ItemFeeCoef(UUIDModel):
     item = models.ForeignKey('Item', on_delete=models.CASCADE, verbose_name=_('アイテム'), related_name='item_fee_coef_set')
     fee_coef = models.IntegerField(_('料金係数'))
