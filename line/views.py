@@ -257,7 +257,7 @@ def callback(request):
                 for type, _ in zip(types, range(0, 10)):
                     columns.append(
                         CarouselColumn(
-                            thumbnail_image_url='https://enyfar.net{}'.format(type.image.url),
+                            thumbnail_image_url='https://{}{}'.format(settings.DOMAIN_NAME, type.image.url),
                             title=type.name,
                             text=type.description,
                             actions=[
@@ -294,7 +294,7 @@ def callback(request):
                     image = item.item_image_set.order_by('order')[0].image.url
                     columns.append(
                         CarouselColumn(
-                            thumbnail_image_url='https://enyfar.net{}'.format(image),
+                            thumbnail_image_url='https://{}{}'.format(settings.DOMAIN_NAME, image),
                             title=item.name,
                             text=text2,
                             actions=[
@@ -339,7 +339,7 @@ def callback(request):
                 for item_image, _ in zip(item_images, range(0, 10)):
                     columns.append(
                         ImageCarouselColumn(
-                            image_url='https://enyfar.net{}'.format(item_image.image.url),
+                            image_url='https://{}{}'.format(settings.DOMAIN_NAME, item_image.image.url),
                             action=PostbackTemplateAction(
                                  label='画像{}'.format(str(item_image.order)),
                                  data='_'
@@ -700,7 +700,7 @@ def callback(request):
 
                     columns.append(
                         CarouselColumn(
-                            thumbnail_image_url='https://enyfar.net{}'.format(image),
+                            thumbnail_image_url='https://{}{}'.format(settings.DOMAIN_NAME, image),
                             title=title,
                             text=text2,
                             actions=[
