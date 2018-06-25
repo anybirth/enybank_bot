@@ -28,6 +28,7 @@ class Size(UUIDModel):
 
     class Meta:
         db_table = 'sizes'
+        ordering = ['min_days']
         verbose_name = _('サイズ')
         verbose_name_plural = _('サイズ')
 
@@ -49,6 +50,7 @@ class Type(UUIDModel):
 
     class Meta:
         db_table = 'types'
+        ordering = ['name']
         verbose_name = _('タイプ')
         verbose_name_plural = _('タイプ')
 
@@ -64,6 +66,7 @@ class ColorCategory(UUIDModel):
 
     class Meta:
         db_table = 'color_categories'
+        ordering = ['name']
         verbose_name = _('カラー分類')
         verbose_name_plural = _('カラー分類')
 
@@ -78,6 +81,7 @@ class Bland(UUIDModel):
 
     class Meta:
         db_table = 'blands'
+        ordering = ['name']
         verbose_name = _('ブランド')
         verbose_name_plural = _('ブランド')
 
@@ -100,6 +104,7 @@ class Item(UUIDModel):
 
     class Meta:
         db_table = 'items'
+        ordering = ['bland__name', 'capacity', 'name']
         verbose_name = _('アイテム')
         verbose_name_plural = _('アイテム')
 
@@ -134,6 +139,7 @@ class ItemFeeCoef(UUIDModel):
 
     class Meta:
         db_table = 'item_fee_coefs'
+        ordering = ['item__bland__name', 'item__capacity', 'item__name', 'starting_point']
         verbose_name = _('アイテム料金係数')
         verbose_name_plural = _('アイテム料金係数')
 
@@ -156,6 +162,7 @@ class ItemImage(UUIDModel):
 
     class Meta:
         db_table = 'item_images'
+        ordering = ['item__bland__name', 'item__capacity', 'item__name', 'order']
         verbose_name = _('アイテム画像')
         verbose_name_plural = _('アイテム画像')
 
@@ -172,6 +179,7 @@ class LINEUser(UUIDModel):
 
     class Meta:
         db_table = 'line_users'
+        ordering = ['-created_at']
         verbose_name = _('LINEユーザー')
         verbose_name_plural = _('LINEユーザー')
 
@@ -197,6 +205,7 @@ class Reservation(UUIDModel):
 
     class Meta:
         db_table = 'reservations'
+        ordering = ['-created_at']
         verbose_name = _('予約')
         verbose_name_plural = _('予約')
 
