@@ -254,7 +254,7 @@ def callback(request):
                 types = models.Type.objects.all()
 
                 columns = []
-                for type in types:
+                for type, _ in zip(types, range(0, 10)):
                     columns.append(
                         CarouselColumn(
                             thumbnail_image_url='https://enyfar.net{}'.format(type.image.url),
@@ -287,7 +287,7 @@ def callback(request):
                 items, text1 = _item_date_checker()
 
                 columns = []
-                for item in items:
+                for item, _ in zip(items, range(0, 10)):
                     text2 = '価格：￥{}～\n'.format(round(item.fee_intercept + item.item_fee_coef_set.order_by('starting_point')[0].fee_coef * 2, -1))\
                     + 'ブランド：{}\n'.format(item.bland)\
                     + 'カラー：{}'.format(item.color)
@@ -336,7 +336,7 @@ def callback(request):
                 item_images = item.item_image_set.order_by('order')
 
                 columns = []
-                for item_image in item_images:
+                for item_image, _ in zip(item_images, range(0, 10)):
                     columns.append(
                         ImageCarouselColumn(
                             image_url='https://enyfar.net{}'.format(item_image.image.url),
@@ -691,7 +691,7 @@ def callback(request):
                 + '詳細を見たい予約をタップしてください'
                 columns = []
 
-                for reservation in reservations:
+                for reservation, _ in zip(reservations, range(0, 10)):
                     start_date = reservation.start_date
                     return_date = reservation.return_date
                     title = '{}/{}/{} ～ {}/{}/{}'.format(start_date.year, start_date.month, start_date.day, return_date.year, return_date.month, return_date.day)
