@@ -99,7 +99,7 @@ def callback(request):
                 for item in items:
                     for r in item.reservation_set.all():
                         if r.uuid != reservation.uuid and not (r.return_date + timedelta(days=1) < reservation.start_date or reservation.return_date < r.start_date - timedelta(days=1)):
-                            items = items.exclude(data=r.item.data)
+                            items = items.exclude(data=str(r.item.uuid))
 
                 if not len(items):
                     text = '条件に一致する商品が見つからなかったため、条件の類似した商品を表示しています\n'\
@@ -109,7 +109,7 @@ def callback(request):
                     for item in items:
                         for r in item.reservation_set.all():
                                 if r.uuid != reservation.uuid and not (r.return_date + timedelta(days=1) < reservation.start_date or reservation.return_date < r.start_date - timedelta(days=1)):
-                                    items = items.exclude(data=r.item.data)
+                                    items = items.exclude(data=str(r.item.uuid))
 
                 return items, text
 
@@ -212,7 +212,7 @@ def callback(request):
                 days = delta.days + 1
 
                 sizes = models.Size.objects.order_by('min_days')
-                actions = [ PostbackTemplateAction(label='{} ({})'.format(size.name, size.description), data=size.data) for size in sizes ]
+                actions = [ PostbackTemplateAction(label='{} ({})'.format(size.name, size.description), data=str(size.uuid)) for size in sizes ]
 
                 for size in sizes:
                     min = size.min_days
@@ -263,7 +263,7 @@ def callback(request):
                             actions=[
                                 PostbackTemplateAction(
                                     label='このタイプにする',
-                                    data=type.data
+                                    data=str(type.uuid)
                                 )
                             ]
                         )
@@ -300,7 +300,7 @@ def callback(request):
                             actions=[
                                 PostbackTemplateAction(
                                      label='詳細を見る',
-                                     data=str(item.data)
+                                     data=str(item.uuid)
                                  )
                             ]
                         )
@@ -322,7 +322,7 @@ def callback(request):
                 return reply
 
             def _item_decision_prompter(arg):
-                item = models.Item.objects.get(data=arg)
+                item = models.Item.objects.get(uuid=arg)
 
                 text1 = '商品の詳細です\n'\
                 + 'こちらの商品でよろしいですか？'
@@ -365,7 +365,7 @@ def callback(request):
                                 actions=[
                                     PostbackTemplateAction(
                                         label='はい',
-                                        data=item.data
+                                        data=str(item.uuid)
                                     ),
                                     PostbackTemplateAction(
                                         label='いいえ',
@@ -872,9 +872,9 @@ def callback(request):
 
             def _size_reciever(next_status, func, check=False, **kwargs):
                 if isinstance(event, PostbackEvent):
-                    data = models.Size.objects.all().values_list('data', flat=True)
-                    if event.postback.data in data:
-                        reservation.size = models.Size.objects.get(data=event.postback.data)
+                    uuids = [str(u) for u in models.Size.objects.all().values_list('uuid', flat=True)]
+                    if event.postback.data in uuids:
+                        reservation.size = models.Size.objects.get(uuid=event.postback.data)
                         reservation.status = next_status
                         reservation.save()
                         if check:
@@ -902,9 +902,9 @@ def callback(request):
 
             def _type_reciever(next_status, func, **kwargs):
                 if isinstance(event, PostbackEvent):
-                    data = models.Type.objects.all().values_list('data', flat=True)
-                    if event.postback.data in data:
-                        reservation.type = models.Type.objects.get(data=event.postback.data)
+                    uuids = [str(u) for u in models.Type.objects.all().values_list('uuid', flat=True)]
+                    if event.postback.data in uuids:
+                        reservation.type = models.Type.objects.get(uuid=event.postback.data)
                         reservation.status = next_status
                         reservation.save()
                         if 'arg' in kwargs:
@@ -926,8 +926,8 @@ def callback(request):
 
             def _item_select_reciever(next_status, func, **kwargs):
                 if isinstance(event, PostbackEvent):
-                    data = models.Item.objects.all().values_list('data', flat=True)
-                    if event.postback.data in data:
+                    uuids = [str(u) for u in models.Item.objects.all().values_list('uuid', flat=True)]
+                    if event.postback.data in uuids:
                         reservation.status = next_status
                         reservation.save()
                         if 'arg' in kwargs:
@@ -937,9 +937,9 @@ def callback(request):
 
             def _item_decision_reciever(next_status, func, prompt_default=False, **kwargs):
                 if isinstance(event, PostbackEvent):
-                    data = models.Item.objects.all().values_list('data', flat=True)
-                    if event.postback.data in data:
-                        reservation.item = models.Item.objects.get(data=event.postback.data)
+                    uuids = [str(u) for u in models.Item.objects.all().values_list('uuid', flat=True)]
+                    if event.postback.data in uuids:
+                        reservation.item = models.Item.objects.get(uuid=event.postback.data)
                         reservation.size = reservation.item.size
                         reservation.type = reservation.item.type
                         reservation.item_fee = _fee_calculator(item=reservation.item)
@@ -969,6 +969,41 @@ def callback(request):
                                 func[1]()
                         else:
                             func[1]()
+
+                if isinstance(event, MessageEvent):
+                    if isinstance(event.message, TextMessage):
+                        names = models.Item.objects.all().values_list('name', flat=True)
+                        if event.message.text in names or event.postback.data == 'はい':
+                            reservation.item = models.Item.objects.get(name=event.message.text)
+                            reservation.size = reservation.item.size
+                            reservation.type = reservation.item.type
+                            reservation.item_fee = _fee_calculator(reservation.item)
+                            reservation.postage = POSTAGE
+                            reservation.total_fee = reservation.item_fee + reservation.postage
+                            if prompt_default and line_user.zip_code and line_user.address and line_user.name:
+                                reservation.status = 11
+                                reservation.save()
+                                _registration_prompter()
+                            else:
+                                reservation.status = next_status[0]
+                                reservation.save()
+                                if 'arg' in kwargs:
+                                    if kwargs['arg'][0]:
+                                        func[0](arg=kwargs['arg'][0])
+                                    else:
+                                        func[0]()
+                                else:
+                                    func[0]()
+                        elif event.message.text == 'いいえ':
+                            reservation.status = next_status2
+                            reservation.save()
+                            if 'arg' in kwargs:
+                                if kwargs['arg'][1]:
+                                    func[1](arg=kwargs['arg'][1])
+                                else:
+                                    func[1]()
+                            else:
+                                func[1]()
 
             def _date_adding_reciever(next_status, func, check=False, prompt_default=False, **kwargs):
                 if isinstance(event, PostbackEvent):
@@ -1004,41 +1039,6 @@ def callback(request):
                                 func(arg=kwargs['arg'])
                             else:
                                 func()
-
-                if isinstance(event, MessageEvent):
-                    if isinstance(event.message, TextMessage):
-                        names = models.Item.objects.all().values_list('data', flat=True)
-                        if event.message.text in names or event.postback.data == 'はい':
-                            reservation.item = models.Item.objects.get(name=event.message.text)
-                            reservation.size = reservation.item.size
-                            reservation.type = reservation.item.type
-                            reservation.item_fee = _fee_calculator(reservation.item)
-                            reservation.postage = POSTAGE
-                            reservation.total_fee = reservation.item_fee + reservation.postage
-                            if prompt_default and line_user.zip_code and line_user.address and line_user.name:
-                                reservation.status = 11
-                                reservation.save()
-                                _registration_prompter()
-                            else:
-                                reservation.status = next_status[0]
-                                reservation.save()
-                                if 'arg' in kwargs:
-                                    if kwargs['arg'][0]:
-                                        func[0](arg=kwargs['arg'][0])
-                                    else:
-                                        func[0]()
-                                else:
-                                    func[0]()
-                        elif event.message.text == 'いいえ':
-                            reservation.status = next_status2
-                            reservation.save()
-                            if 'arg' in kwargs:
-                                if kwargs['arg'][1]:
-                                    func[1](arg=kwargs['arg'][1])
-                                else:
-                                    func[1]()
-                            else:
-                                func[1]()
 
             def _zip_code_reciever(next_status, func, **kwargs):
                 if isinstance(event, MessageEvent):
