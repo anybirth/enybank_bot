@@ -34,17 +34,17 @@ SELECT_RETURN_DATE = '返却日を選択してください'
 
 INPUT_ZIP_CODE = '郵便番号を入力してください\n'\
 + '（半角数字7桁・ハイフンなし）\n\n'\
-+ '（例）1500043'
++ '（例）1230001'
 
 INPUT_ADDRESS = '住所を入力してください\n\n'\
-+ '(例)東京都渋谷区道玄坂2-10-12 新大宗ビル3号館531'
++ '(例)東京都港区三田1-2-34 エニーカーサ101'
 
 INPUT_NAME = 'お名前（宛名）を入力してください\n\n'\
-+ '(例)松澤 直輝'
++ '(例)山田 太郎'
 
 INPUT_PHONE_NUMBER = '電話番号を入力してください\n'\
 + '（半角数字・ハイフンなし）\n\n'\
-+ '（例）0312345678'
++ '（例）09012345678'
 
 ABOUT_PAYMENT = 'お支払い方法と期限については、レンタル日前までにご連絡いたしますので、ご対応をお願い致します'
 
@@ -225,7 +225,7 @@ def callback(request):
                             recommendation = size.name
 
                 return_date_check = '返却日は {}年{}月{}日 ですね\n\n次は、'.format(reservation.return_date.year, reservation.return_date.month, reservation.return_date.day)
-                text = 'サイズを選択してください\n{}日間のレンタルなら、{}サイズがおすすめです'.format(days, recommendation)
+                text = 'サイズを選択してください\n{}日間のレンタルなら、\n\n{}サイズが\n\nおすすめです'.format(days, recommendation)
                 if check:
                     text = return_date_check + text
 
@@ -324,9 +324,9 @@ def callback(request):
             def _item_decision_prompter(arg):
                 item = models.Item.objects.get(uuid=arg)
 
-                text1 = '商品の詳細です\n'\
-                + 'こちらの商品でよろしいですか？'
-                text2 = '【商品詳細】\n\n'\
+                text= '商品の詳細です\n'\
+                + 'こちらの商品でよろしいですか？\n\n'\
+                + '【商品詳細】\n\n'\
                 + '商品名：{}\n\n'.format(item.name)\
                 + 'ブランド{}\n\n'.format(item.bland)\
                 + '容量：{}L ({})\n\n'.format(item.capacity, item.size)\
@@ -350,14 +350,13 @@ def callback(request):
                 reply = line_bot_api.reply_message(
                     event.reply_token,
                     [
-                        TextSendMessage(text1),
                         TemplateSendMessage(
                             alt_text='商品画像',
                             template=ImageCarouselTemplate(
                                 columns=columns
                             )
                         ),
-                        TextSendMessage(text2),
+                        TextSendMessage(text),
                         TemplateSendMessage(
                             alt_text='こちらの商品でよろしければ「はい」、別の商品を探す場合は「いいえ」を選択してください',
                             template=ConfirmTemplate(
@@ -386,9 +385,11 @@ def callback(request):
                 item = reservation.item
                 add_one_days =  _fee_calculator(item, days+1) - _fee_calculator(item, days)
                 add_two_days =  _fee_calculator(item, days+2) - _fee_calculator(item, days+1)
+                extra = _fee_calculator(item, 2) / 2
 
                 text = '商品を保存しました\n\n'\
-                + '現在{}日間で予約されていますが、余裕をもって準備・返却するために、たった{}円でレンタル日数を1日増やすことができます\n'.format(days, add_one_days, add_two_days)\
+                + '現在{}日間で予約されていますが、余裕を持って準備・返却するために、前後に日数を追加することをオススメしています\n'.format(days)\
+                + '（事前にご報告なく延長された場合は、{}円/1日をいただいています）\n\n'.format(extra)\
                 + '日数をプラスしますか？'
 
                 reply = line_bot_api.reply_message(
@@ -669,7 +670,7 @@ def callback(request):
                         TemplateSendMessage(
                             alt_text='予約を中止する場合は「はい」、中止しない場合は「いいえ」を選択してください',
                             template=ConfirmTemplate(
-                                text='予約を中止しますか？この操作は取り消せません。',
+                                text='予約を中止しますか？この操作は取り消せません',
                                 actions=[
                                     PostbackTemplateAction(
                                         label='はい',
