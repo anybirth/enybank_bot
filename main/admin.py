@@ -8,7 +8,7 @@ class ItemInline(admin.TabularInline):
     model = models.Item
     can_delete = True
     show_change_link = True
-    fields = ['name', 'bland', 'capacity', 'size', 'type', 'color_category', 'color']
+    fields = ['name', 'bland', 'capacity', 'size', 'type', 'color_category']
 
     def get_max_num(self, request, obj=None, **kwargs):
         max_num = 0
