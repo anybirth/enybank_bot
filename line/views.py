@@ -220,13 +220,13 @@ def callback(request):
                     max = size.max_days
                     if max:
                         if min <= days < max:
-                            recommendation = size.name
+                            recommendation = size
                     elif not max:
                         if min <= days:
-                            recommendation = size.name
+                            recommendation = size
 
                 return_date_check = '返却日は {}年{}月{}日 ですね\n\n次は、'.format(reservation.return_date.year, reservation.return_date.month, reservation.return_date.day)
-                text = 'サイズを選択してください\n{}日間のレンタルなら、\n\n{}サイズが\n\nおすすめです'.format(days, recommendation)
+                text = 'サイズを選択してください\n{}日間のレンタルなら、\n\n {}サイズ ({})\n\nがおすすめです'.format(days, recommendation.name, recommendation.description)
                 if check:
                     text = return_date_check + text
 
@@ -235,10 +235,10 @@ def callback(request):
                     [
                         TextSendMessage(text),
                         TemplateSendMessage(
-                            alt_text='サイズを選択してください\n{}日間のレンタルなら、{}サイズがおすすめです'.format(days, recommendation),
+                            alt_text='サイズを選択してください\n{}日間のレンタルなら、{}サイズ ({}) がおすすめです'.format(days, recommendation.name, recommendation.description),
                             template=ButtonsTemplate(
                                 title='サイズを選択',
-                                text='{}日間のレンタルなら、{}サイズがおすすめです'.format(days, recommendation),
+                                text='{}日間のレンタルなら、{}サイズ ({}) がおすすめです'.format(days, recommendation.name, recommendation.description),
                                 actions=actions
                             )
                         )
