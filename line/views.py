@@ -3,6 +3,7 @@ import uuid
 import json
 import requests
 import logging
+import traceback
 from datetime import date, datetime, timedelta
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden, HttpResponseServerError
 from django.conf import settings
@@ -1350,6 +1351,7 @@ def callback(request):
 
             except:
                 _error_handler()
+                traceback.print_exc()
                 return HttpResponseServerError()
 
         return HttpResponse()
