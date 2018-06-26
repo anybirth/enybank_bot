@@ -39,6 +39,10 @@ class ItemImageInline(admin.TabularInline):
             return extra - obj.item_image_set.count()
         return extra
 
+    def get_max_num(self, request, obj=None, **kwargs):
+        max_num = 10
+        return max_num
+
 class ReservationInline(admin.TabularInline):
     model = models.Reservation
     extra = 0
