@@ -4,7 +4,7 @@ import json
 import requests
 import logging
 from datetime import date, datetime, timedelta
-from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden, HttpResponseServerError
 from django.conf import settings
 from django.core.files import File
 from django.db.models import Q, Count
@@ -849,7 +849,14 @@ def callback(request):
                                 _text_message('予約されている商品はありません')
                         else:
                             _thanks(THANKS_FOR_USING)
+
                 elif isinstance(event, PostbackEvent):
+                    _uuid = None
+                    try:
+                        _uuid = uuid.UUID(event.postback.data)
+                    except ValueError:
+                        pass
+
                     if event.postback.data == 'reservation':
                         reservation = models.Reservation(line_user=line_user, status=1)
                         reservation.save()
@@ -859,7 +866,7 @@ def callback(request):
                             _reconfirmation_prompter()
                         else:
                             _text_message('予約されている商品はありません')
-                    elif uuid.UUID(event.postback.data) in reservations.values_list('uuid', flat=True):
+                    elif _uuid in reservations.values_list('uuid', flat=True):
                         reservation_selected = reservations.get(uuid=event.postback.data)
                         _remodification_prompter()
 
@@ -1190,142 +1197,160 @@ def callback(request):
 
 
 
+            ## error handler ##
+
+            def _error_handler():
+                if reservation:
+                    if reservation.status:
+                        reservation.delete()
+                line_bot_api.push_message(
+                    line_id,
+                    TextSendMessage('操作中にエラーが発生しました\nお手数ですが操作を最初からやり直してください\n\n何度もエラーが発生する場合は、以下のメールアドレスまでご連絡ください\n\ninfo@anybirth.co.jp')
+                )
+
+
+
             ## main process ##
 
-            if isinstance(event, FollowEvent):
-                _thanks_for_following()
+            try:
+                if isinstance(event, FollowEvent):
+                    _thanks_for_following()
 
-            if isinstance(event, PostbackEvent):
-                _rich_menu_reciever()
+                if isinstance(event, PostbackEvent):
+                    _rich_menu_reciever()
 
-            if has_created == False:
-                _thanks_for_using()
-
-            elif has_created == True:
-                if reservation.status == 0:
+                if has_created == False:
                     _thanks_for_using()
 
-                elif reservation.status == 1:
-                    _start_date_reciever(next_status=2, func=_return_date_prompter, check=True)
+                elif has_created == True:
+                    if reservation.status == 0:
+                        _thanks_for_using()
 
-                elif reservation.status == 2:
-                    _return_date_reciever(next_status=3, func=_size_prompter, check=True)
+                    elif reservation.status == 1:
+                        _start_date_reciever(next_status=2, func=_return_date_prompter, check=True)
 
-                elif reservation.status == 3:
-                    _size_reciever(next_status=4, func=_type_prompter, check=True)
+                    elif reservation.status == 2:
+                        _return_date_reciever(next_status=3, func=_size_prompter, check=True)
 
-                elif reservation.status == 4:
-                    _type_reciever(next_status=5, func=_item_select_prompter)
+                    elif reservation.status == 3:
+                        _size_reciever(next_status=4, func=_type_prompter, check=True)
 
-                elif reservation.status == 5:
-                    _item_select_reciever(next_status=6, func=_item_decision_prompter, arg=event.postback.data)
+                    elif reservation.status == 4:
+                        _type_reciever(next_status=5, func=_item_select_prompter)
 
-                elif reservation.status == 6:
-                    _item_decision_reciever(next_status=(7, 21), func=(_date_adding_prompter, _item_modification_prompter))
+                    elif reservation.status == 5:
+                        _item_select_reciever(next_status=6, func=_item_decision_prompter, arg=event.postback.data)
 
-                elif reservation.status == 7:
-                    _date_adding_reciever(next_status=8, func=_text_message, arg='レンタル日数を追加しました\n\n' + INPUT_ZIP_CODE, prompt_default=True)
+                    elif reservation.status == 6:
+                        _item_decision_reciever(next_status=(7, 21), func=(_date_adding_prompter, _item_modification_prompter))
 
-                elif reservation.status == 8:
-                    _zip_code_reciever(next_status=9, func=_text_message, arg=INPUT_ADDRESS)
+                    elif reservation.status == 7:
+                        _date_adding_reciever(next_status=8, func=_text_message, arg='レンタル日数を追加しました\n\n' + INPUT_ZIP_CODE, prompt_default=True)
 
-                elif reservation.status == 9:
-                    _address_reciever(next_status=10, func=_text_message, arg=INPUT_NAME)
+                    elif reservation.status == 8:
+                        _zip_code_reciever(next_status=9, func=_text_message, arg=INPUT_ADDRESS)
 
-                elif reservation.status == 10:
-                    _name_reciever(next_status=91, func=_check_prompter)
+                    elif reservation.status == 9:
+                        _address_reciever(next_status=10, func=_text_message, arg=INPUT_NAME)
 
-
-                elif reservation.status == 11:
-                    _using_default_reciever()
-
-                elif reservation.status == 12:
-                    _zip_code_reciever(next_status=9, func=_text_message, arg=INPUT_ADDRESS)
+                    elif reservation.status == 10:
+                        _name_reciever(next_status=91, func=_check_prompter)
 
 
-                elif reservation.status == 21:
-                    _postback_reciever(next_status=(22, 25), func=(_item_condition_modification_prompter, _item_select_prompter), data=('modify_condition', 'list_item'))
+                    elif reservation.status == 11:
+                        _using_default_reciever()
 
-                elif reservation.status == 22:
-                    _postback_reciever(next_status=(23, 24), func=(_size_prompter, _type_prompter), data=('modify_size', 'modify_type'))
-
-                elif reservation.status == 23:
-                    _size_reciever(next_status=25, func=_item_select_prompter)
-
-                elif reservation.status == 24:
-                    _type_reciever(next_status=25, func=_item_select_prompter)
-
-                elif reservation.status == 25:
-                    _item_select_reciever(next_status=26, func=_item_decision_prompter, arg=event.postback.data)
-
-                elif reservation.status == 26:
-                    _item_decision_reciever(next_status=(7, 21), func=(_date_adding_prompter, _item_modification_prompter))
+                    elif reservation.status == 12:
+                        _zip_code_reciever(next_status=9, func=_text_message, arg=INPUT_ADDRESS)
 
 
-                elif reservation.status == 31:
-                    _start_date_reciever(next_status=32, func=_return_date_prompter, arg=str(reservation.return_date), check=True)
+                    elif reservation.status == 21:
+                        _postback_reciever(next_status=(22, 25), func=(_item_condition_modification_prompter, _item_select_prompter), data=('modify_condition', 'list_item'))
 
-                elif reservation.status == 32:
-                    _return_date_reciever(next_status=43, func=_size_prompter, check=True)
+                    elif reservation.status == 22:
+                        _postback_reciever(next_status=(23, 24), func=(_size_prompter, _type_prompter), data=('modify_size', 'modify_type'))
 
-                elif reservation.status == 33:
-                    _size_reciever(next_status=35, func=_item_select_prompter)
+                    elif reservation.status == 23:
+                        _size_reciever(next_status=25, func=_item_select_prompter)
 
-                elif reservation.status == 34:
-                    _type_reciever(next_status=35, func=_item_select_prompter)
+                    elif reservation.status == 24:
+                        _type_reciever(next_status=25, func=_item_select_prompter)
 
-                elif reservation.status == 35:
-                    _item_select_reciever(next_status=36, func=_item_decision_prompter, arg=event.postback.data)
+                    elif reservation.status == 25:
+                        _item_select_reciever(next_status=26, func=_item_decision_prompter, arg=event.postback.data)
 
-                elif reservation.status == 36:
-                    _item_decision_reciever(next_status=(91, 94), func=(_check_prompter, _item_modification_prompter))
-
-                elif reservation.status == 37:
-                    _zip_code_reciever(next_status=38, func=_text_message, arg=INPUT_ADDRESS)
-
-                elif reservation.status == 38:
-                    _address_reciever(next_status=91, func=_check_prompter)
-
-                elif reservation.status == 39:
-                    _name_reciever(next_status=91, func=_check_prompter)
+                    elif reservation.status == 26:
+                        _item_decision_reciever(next_status=(7, 21), func=(_date_adding_prompter, _item_modification_prompter))
 
 
-                elif reservation.status == 43:
-                    _size_reciever(next_status=44, func=_type_prompter, check=True)
+                    elif reservation.status == 31:
+                        _start_date_reciever(next_status=32, func=_return_date_prompter, arg=str(reservation.return_date), check=True)
 
-                elif reservation.status == 44:
-                    _type_reciever(next_status=45, func=_item_select_prompter)
+                    elif reservation.status == 32:
+                        _return_date_reciever(next_status=43, func=_size_prompter, check=True)
 
-                elif reservation.status == 45:
-                    _item_select_reciever(next_status=46, func=_item_decision_prompter, arg=event.postback.data)
+                    elif reservation.status == 33:
+                        _size_reciever(next_status=35, func=_item_select_prompter)
 
-                elif reservation.status == 46:
-                    _item_decision_reciever(next_status=(47, 94), func=(_date_adding_prompter, _item_modification_prompter))
+                    elif reservation.status == 34:
+                        _type_reciever(next_status=35, func=_item_select_prompter)
 
-                elif reservation.status == 47:
-                    _date_adding_reciever(next_status=91, func=_check_prompter, check=True)
+                    elif reservation.status == 35:
+                        _item_select_reciever(next_status=36, func=_item_decision_prompter, arg=event.postback.data)
+
+                    elif reservation.status == 36:
+                        _item_decision_reciever(next_status=(91, 94), func=(_check_prompter, _item_modification_prompter))
+
+                    elif reservation.status == 37:
+                        _zip_code_reciever(next_status=38, func=_text_message, arg=INPUT_ADDRESS)
+
+                    elif reservation.status == 38:
+                        _address_reciever(next_status=91, func=_check_prompter)
+
+                    elif reservation.status == 39:
+                        _name_reciever(next_status=91, func=_check_prompter)
 
 
-                elif reservation.status == 91:
-                    _postback_reciever(next_status=(92, 93, 99), func=(_register_prompter, _modification_prompter, _delete_prompter), data=('confirm', 'modify', 'quit'))
+                    elif reservation.status == 43:
+                        _size_reciever(next_status=44, func=_type_prompter, check=True)
 
-                elif reservation.status == 92:
-                    _register_reciever()
+                    elif reservation.status == 44:
+                        _type_reciever(next_status=45, func=_item_select_prompter)
 
-                elif reservation.status == 93:
-                    _postback_reciever( next_status=(31, 94, 96), func=(_start_date_prompter, _item_modification_prompter, _destination_modification_prompter), data=('modify_rental_period', 'modify_item', 'modify_destination'), arg=(str(reservation.start_date), None, None))
+                    elif reservation.status == 45:
+                        _item_select_reciever(next_status=46, func=_item_decision_prompter, arg=event.postback.data)
 
-                elif reservation.status == 94:
-                    _postback_reciever(next_status=(95, 35), func=(_item_condition_modification_prompter, _item_select_prompter), data=('modify_condition', 'list_item'))
+                    elif reservation.status == 46:
+                        _item_decision_reciever(next_status=(47, 94), func=(_date_adding_prompter, _item_modification_prompter))
 
-                elif reservation.status == 95:
-                    _postback_reciever(next_status=(33, 34), func=(_size_prompter, _type_prompter), data=('modify_size', 'modify_type'))
+                    elif reservation.status == 47:
+                        _date_adding_reciever(next_status=91, func=_check_prompter, check=True)
 
-                elif reservation.status == 96:
-                    _postback_reciever(next_status=(37, 39), func=(_text_message, _text_message), arg=(INPUT_ZIP_CODE, INPUT_NAME), data=('modify_address', 'modify_name'))
 
-                elif reservation.status == 99:
-                    _delete_reciever()
+                    elif reservation.status == 91:
+                        _postback_reciever(next_status=(92, 93, 99), func=(_register_prompter, _modification_prompter, _delete_prompter), data=('confirm', 'modify', 'quit'))
+
+                    elif reservation.status == 92:
+                        _register_reciever()
+
+                    elif reservation.status == 93:
+                        _postback_reciever( next_status=(31, 94, 96), func=(_start_date_prompter, _item_modification_prompter, _destination_modification_prompter), data=('modify_rental_period', 'modify_item', 'modify_destination'), arg=(str(reservation.start_date), None, None))
+
+                    elif reservation.status == 94:
+                        _postback_reciever(next_status=(95, 35), func=(_item_condition_modification_prompter, _item_select_prompter), data=('modify_condition', 'list_item'))
+
+                    elif reservation.status == 95:
+                        _postback_reciever(next_status=(33, 34), func=(_size_prompter, _type_prompter), data=('modify_size', 'modify_type'))
+
+                    elif reservation.status == 96:
+                        _postback_reciever(next_status=(37, 39), func=(_text_message, _text_message), arg=(INPUT_ZIP_CODE, INPUT_NAME), data=('modify_address', 'modify_name'))
+
+                    elif reservation.status == 99:
+                        _delete_reciever()
+
+            except:
+                _error_handler()
+                return HttpResponseServerError()
 
         return HttpResponse()
     else:
