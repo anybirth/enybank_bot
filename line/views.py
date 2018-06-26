@@ -385,7 +385,7 @@ def callback(request):
                 item = reservation.item
                 add_one_days =  _fee_calculator(item, days+1) - _fee_calculator(item, days)
                 add_two_days =  _fee_calculator(item, days+2) - _fee_calculator(item, days+1)
-                extra = _fee_calculator(item, 2) / 2
+                extra = round(_fee_calculator(item, 2) / 2)
 
                 text = '商品を保存しました\n\n'\
                 + '現在{}日間で予約されていますが、余裕を持って準備・返却するために、前後に日数を追加することをオススメしています\n'.format(days)\
