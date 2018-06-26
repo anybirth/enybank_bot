@@ -11,7 +11,7 @@ class ItemInline(admin.TabularInline):
     fields = ['name', 'bland', 'capacity', 'size', 'type', 'color_category', 'color']
 
     def get_max_num(self, request, obj=None, **kwargs):
-        max_num = None
+        max_num = 0
         if obj:
             max_num = obj.item_set.count()
         return max_num
