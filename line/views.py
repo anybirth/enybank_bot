@@ -1356,4 +1356,4 @@ def callback(request):
 
         return HttpResponse()
     else:
-        return HttpResponseBadRequest('<h1 style="text-align:center;font-weight:400;">HTTP Error 400 – Bad Request</h1>')
+        return HttpResponseBadRequest('<h1>Bad Request</h1><p>Your browser sent a request that this server could not understand.</p>')
