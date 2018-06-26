@@ -7,8 +7,9 @@ from datetime import date, datetime, timedelta
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
 from django.conf import settings
 from django.core.files import File
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib.staticfiles.templatetags.staticfiles import static
 from linebot import LineBotApi, WebhookParser
 from linebot.exceptions import InvalidSignatureError, LineBotApiError
 from linebot.models import FollowEvent, PostbackEvent, MessageEvent, ImageMessage, ImageSendMessage, TextMessage, TextSendMessage, TemplateSendMessage, ButtonsTemplate, ConfirmTemplate,  CarouselTemplate,  CarouselColumn, ImageCarouselTemplate, ImageCarouselColumn,  PostbackTemplateAction, DatetimePickerTemplateAction
@@ -94,7 +95,7 @@ def callback(request):
             def _item_date_checker():
                 text = '条件に一致する商品はこちらになります\n'\
                 + '詳細を見たい商品の「詳細を見る」タップしてください'
-                items = models.Item.objects.filter(size=reservation.size, type=reservation.type)
+                items = models.Item.objects.filter(size=reservation.size, type=reservation.type).annotate(Count('reservation')).order_by('-reservation__count')
 
                 for item in items:
                     for r in item.reservation_set.all():
@@ -283,41 +284,84 @@ def callback(request):
                 )
                 return reply
 
-            def _item_select_prompter():
+            def _item_select_prompter(start=0):
                 items, text1 = _item_date_checker()
 
-                columns = []
-                for item, _ in zip(items, range(0, 10)):
-                    text2 = '価格：￥{}～\n'.format(round(item.fee_intercept + item.item_fee_coef_set.order_by('starting_point')[0].fee_coef * 2, -1))\
-                    + 'ブランド：{}\n'.format(item.bland)\
-                    + 'カラー：{}'.format(item.color)
-                    image = item.item_image_set.order_by('order')[0].image.url
+                if len(items) <= start + 9:
+                    end = len(items)
+
+                    columns = []
+                    for i in range(start, end):
+                        item = items[i]
+                        text2 = '価格：￥{}～\n'.format(round(item.fee_intercept + item.item_fee_coef_set.order_by('starting_point')[0].fee_coef * 2, -1))\
+                        + 'ブランド：{}\n'.format(item.bland)\
+                        + 'カラー：{}'.format(item.color)
+                        image = item.item_image_set.order_by('order')[0].image.url
+                        columns.append(
+                            CarouselColumn(
+                                thumbnail_image_url='https://{}{}'.format(settings.DOMAIN_NAME, image),
+                                title=item.name,
+                                text=text2,
+                                actions=[
+                                    PostbackTemplateAction(
+                                         label='詳細を見る',
+                                         data=str(item.uuid)
+                                     )
+                                ]
+                            )
+                        )
+                elif len(items) > start + 9:
+                    end = start + 9
+
+                    columns = []
+                    for i in range(start, end):
+                        item = items[i]
+                        text2 = '価格：￥{}～\n'.format(round(item.fee_intercept + item.item_fee_coef_set.order_by('starting_point')[0].fee_coef * 2, -1))\
+                        + 'ブランド：{}\n'.format(item.bland)\
+                        + 'カラー：{}'.format(item.color)
+                        image = item.item_image_set.order_by('order')[0].image.url
+                        columns.append(
+                            CarouselColumn(
+                                thumbnail_image_url='https://{}{}'.format(settings.DOMAIN_NAME, image),
+                                title=item.name,
+                                text=text2,
+                                actions=[
+                                    PostbackTemplateAction(
+                                         label='詳細を見る',
+                                         data=str(item.uuid)
+                                     )
+                                ]
+                            )
+                        )
                     columns.append(
                         CarouselColumn(
-                            thumbnail_image_url='https://{}{}'.format(settings.DOMAIN_NAME, image),
-                            title=item.name,
-                            text=text2,
+                            thumbnail_image_url='https://{}{}'.format(settings.DOMAIN_NAME, static('line/img/plus.png')),
+                            title='もっと見る',
+                            text='更に商品を見たい場合、下の「もっと見る」をタップしてください',
                             actions=[
                                 PostbackTemplateAction(
-                                     label='詳細を見る',
-                                     data=str(item.uuid)
+                                     label='もっと見る',
+                                     data=str(start + 9)
                                  )
                             ]
                         )
                     )
 
+                messages = [
+                    TemplateSendMessage(
+                        alt_text='商品を選択してください',
+                        template=CarouselTemplate(
+                            image_aspect_ratio='square',
+                            columns=columns
+                        )
+                    )
+                ]
+                if start == 0:
+                    messages.insert(0, TextSendMessage(text1))
+
                 reply = line_bot_api.reply_message(
                     event.reply_token,
-                    [
-                        TextSendMessage(text1),
-                        TemplateSendMessage(
-                            alt_text='商品を選択してください',
-                            template=CarouselTemplate(
-                                image_aspect_ratio='square',
-                                columns=columns
-                            )
-                        )
-                    ]
+                    messages
                 )
                 return reply
 
@@ -935,6 +979,9 @@ def callback(request):
                             func(arg=kwargs['arg'])
                         else:
                             func()
+                    elif event.postback.data.isdecimal():
+                        num = int(event.postback.data)
+                        _item_select_prompter(start=num)
 
             def _item_decision_reciever(next_status, func, prompt_default=False, **kwargs):
                 if isinstance(event, PostbackEvent):
