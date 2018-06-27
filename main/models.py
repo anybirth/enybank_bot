@@ -57,6 +57,19 @@ class Type(UUIDModel):
     def __str__(self):
         return '%s' % self.name
 
+    def save(self, *args, **kwargs):
+        try:
+            type = Type.objects.get(pk=self.pk)
+            if type.image:
+                type.image.delete(save=False)
+        except self.DoesNotExist:
+            pass
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        self.image.delete()
+        super().delete(*args, **kwargs)
+
 class ColorCategory(UUIDModel):
     name = models.CharField(_('カラー分類名'), max_length=50)
     description = models.TextField(_('備考'), blank=True)
@@ -172,6 +185,19 @@ class ItemImage(UUIDModel):
 
     def __str__(self):
         return '%s' % self.item.name
+
+    def save(self, *args, **kwargs):
+        try:
+            item_image = ItemImage.objects.get(pk=self.pk)
+            if item_image.image:
+                item_image.image.delete(save=False)
+        except self.DoesNotExist:
+            pass
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        self.image.delete()
+        super().delete(*args, **kwargs)
 
 class LINEUser(UUIDModel):
     line_id = models.CharField(_('LINE ID'), max_length=255)
