@@ -80,7 +80,7 @@ class BlandAdmin(admin.ModelAdmin):
     inlines = [ItemInline]
 
 class ItemAdmin(admin.ModelAdmin):
-    list_display = ('name', 'bland', 'capacity', 'size', 'type', 'color_category', 'color')
+    list_display = ('name', 'bland', 'capacity', 'size', 'type', 'color_category')
     list_filter = ['size', 'type', 'color_category', 'bland']
     search_fields = ['name', 'description', 'bland__name', 'bland__name', 'size__name', 'type__name', 'color_category__name', 'color']
     inlines = [ItemFeeCoefInline, ItemImageInline, ReservationInline]
