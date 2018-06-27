@@ -295,8 +295,7 @@ def callback(request):
                     for i in range(start, end):
                         item = items[i]
                         text2 = '価格：￥{}～\n'.format(round(item.fee_intercept + item.item_fee_coef_set.order_by('starting_point')[0].fee_coef * 2, -1))\
-                        + 'ブランド：{}\n'.format(item.bland)\
-                        + 'カラー：{}'.format(item.color)
+                        + 'ブランド：{}\n'.format(item.bland)
                         image = item.item_image_set.order_by('order')[0].image.url
                         columns.append(
                             CarouselColumn(
@@ -318,8 +317,7 @@ def callback(request):
                     for i in range(start, end):
                         item = items[i]
                         text2 = '価格：￥{}～\n'.format(round(item.fee_intercept + item.item_fee_coef_set.order_by('starting_point')[0].fee_coef * 2, -1))\
-                        + 'ブランド：{}\n'.format(item.bland)\
-                        + 'カラー：{}'.format(item.color)
+                        + 'ブランド：{}\n'.format(item.bland)
                         image = item.item_image_set.order_by('order')[0].image.url
                         columns.append(
                             CarouselColumn(
@@ -372,12 +370,12 @@ def callback(request):
                 text= '商品の詳細です\n'\
                 + 'こちらの商品でよろしいですか？\n\n'\
                 + '【商品詳細】\n\n'\
-                + '商品名：{}\n\n'.format(item.name)\
-                + 'ブランド{}\n\n'.format(item.bland)\
-                + '容量：{}L ({})\n\n'.format(item.capacity, item.size)\
-                + 'タイプ：{}\n\n'.format(item.type)\
-                + 'カラー：{}\n\n'.format(item.color)\
-                + '料金（送料を含む）：￥{}'.format(_fee_calculator(item))
+                + '商品名：\n{}\n\n'.format(item.name)\
+                + 'ブランド：\n{}\n\n'.format(item.bland)\
+                + '容量：\n{}L ({})\n\n'.format(item.capacity, item.size)\
+                + 'タイプ：\n{}\n\n'.format(item.type)\
+                + 'カラー：\n{}\n\n'.format(item.color)\
+                + '料金（送料を含む）：\n￥{}'.format(_fee_calculator(item))
                 item_images = item.item_image_set.order_by('order')
 
                 columns = []
@@ -497,22 +495,22 @@ def callback(request):
 
             def _check_prompter(check=False):
                 text = '項目の入力が完了しました\n'\
-                + '予約内容は以下の通りです\n\n'\
-                + '【予約内容】\n'\
-                + '開始日：{}年{}月{}日\n'.format(reservation.start_date.year, reservation.start_date.month, reservation.start_date.day)\
-                + '返却日：{}年{}月{}日\n'.format(reservation.return_date.year, reservation.return_date.month, reservation.return_date.day)\
-                + '住所：〒{} {}\n'.format(reservation.zip_code, reservation.address)\
-                + 'お名前：{}\n\n'.format(reservation.name)\
-                + '【料金】\n'\
+                + '予約内容は以下の通りです\n\n\n'\
+                + '【予約内容】\n\n'\
+                + '開始日：\n{}年{}月{}日\n\n'.format(reservation.start_date.year, reservation.start_date.month, reservation.start_date.day)\
+                + '返却日：\n{}年{}月{}日\n\n'.format(reservation.return_date.year, reservation.return_date.month, reservation.return_date.day)\
+                + '住所：\n〒{} {}\n\n'.format(reservation.zip_code, reservation.address)\
+                + 'お名前：\n{}\n\n\n'.format(reservation.name)\
+                + '【料金】\n\n'\
                 + '小計：￥{}\n'.format(reservation.item_fee)\
-                + '送料：￥{}\n'.format(reservation.postage)\
-                + 'ご請求額：￥{}\n\n'.format(reservation.total_fee)\
-                + '【商品詳細】\n'\
-                + '商品名：{}\n'.format(reservation.item.name)\
-                + 'ブランド{}\n'.format(reservation.item.bland)\
-                + '容量：{}L ({})\n'.format(reservation.item.capacity, reservation.item.size)\
-                + 'タイプ：{}\n'.format(reservation.item.type)\
-                + 'カラー：{}\n\n'.format(reservation.item.color)\
+                + '送料：￥{}\n\n'.format(reservation.postage)\
+                + 'ご請求額：￥{}\n\n\n'.format(reservation.total_fee)\
+                + '【商品詳細】\n\n'\
+                + '商品名：\n{}\n\n'.format(reservation.item.name)\
+                + 'ブランド：\n{}\n\n'.format(reservation.item.bland)\
+                + '容量：\n{}L ({})\n\n'.format(reservation.item.capacity, reservation.item.size)\
+                + 'タイプ：\n{}\n\n'.format(reservation.item.type)\
+                + 'カラー：\n{}\n\n\n'.format(reservation.item.color)\
                 + 'この内容で予約を確定する場合は「確定」、予約内容を修正する場合は「修正」、予約を中止する場合は「中止」を押してください'
 
                 if check:
@@ -775,22 +773,22 @@ def callback(request):
 
             def _remodification_prompter():
                 reservation_selected = reservations.get(uuid=event.postback.data)
-                text1 = '予約内容は以下の通りです\n\n'\
-                + '【予約内容】\n'\
-                + '開始日：{}年{}月{}日\n'.format(reservation_selected.start_date.year, reservation_selected.start_date.month, reservation_selected.start_date.day)\
-                + '返却日：{}年{}月{}日\n'.format(reservation_selected.return_date.year, reservation_selected.return_date.month, reservation_selected.return_date.day)\
-                + 'お届け先住所：〒{} {}\n'.format(reservation_selected.zip_code, reservation_selected.address)\
-                + 'お名前：{}\n'.format(reservation_selected.name)\
-                + '【料金】\n'\
+                text1 = '予約内容は以下の通りです\n\n\n'\
+                + '【予約内容】\n\n'\
+                + '開始日：\n{}年{}月{}日\n\n'.format(reservation_selected.start_date.year, reservation_selected.start_date.month, reservation_selected.start_date.day)\
+                + '返却日：\n{}年{}月{}日\n\n'.format(reservation_selected.return_date.year, reservation_selected.return_date.month, reservation_selected.return_date.day)\
+                + 'お届け先住所：\n〒{} {}\n\n'.format(reservation_selected.zip_code, reservation_selected.address)\
+                + 'お名前：\n{}\n\n\n'.format(reservation_selected.name)\
+                + '【料金】\n\n'\
                 + '小計：￥{}\n'.format(reservation_selected.item_fee)\
                 + '送料：￥{}\n\n'.format(reservation_selected.postage)\
-                + '合計料金：￥{}\n\n'.format(reservation_selected.total_fee)\
-                + '【商品詳細】\n'\
-                + '商品名：{}\n'.format(reservation_selected.item.name)\
-                + 'ブランド{}\n'.format(reservation_selected.item.bland)\
-                + '容量：{}L ({})\n'.format(reservation_selected.item.capacity, reservation_selected.item.size)\
-                + 'タイプ：{}\n'.format(reservation_selected.item.type)\
-                + 'カラー：{}'.format(reservation_selected.item.color)
+                + '合計料金：￥{}\n\n\n'.format(reservation_selected.total_fee)\
+                + '【商品詳細】\n\n'\
+                + '商品名：\n{}\n\n'.format(reservation_selected.item.name)\
+                + 'ブランド：\n{}\n\n'.format(reservation_selected.item.bland)\
+                + '容量：\n{}L ({})\n\n'.format(reservation_selected.item.capacity, reservation_selected.item.size)\
+                + 'タイプ：\n{}\n\n'.format(reservation_selected.item.type)\
+                + 'カラー：\n{}'.format(reservation_selected.item.color)
                 text2 = '予約を変更、または取り消したい場合には、以下のメールアドレスまでご連絡ください\n\n'\
                 + 'メール：info@anybirth.co.jp'
 
