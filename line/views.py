@@ -873,9 +873,8 @@ def callback(request):
                 if event.postback.data == 'quit':
                     if reservation:
                         if reservation.status:
-                            reservation.status = 99
-                            reservation.save()
-                            _delete_prompter()
+                            reservation.delete()
+                            _text_message('予約を中止しました')
                         else:
                             _text_message('現在行っている操作はありません\nリッチメニューから操作を選んでください')
                     else:
@@ -1188,7 +1187,7 @@ def callback(request):
                 if isinstance(event, PostbackEvent):
                     if event.postback.data == 'delete':
                         reservation.delete()
-                        _text_message('予約を削除しました')
+                        _text_message('予約を中止しました')
                     elif event.postback.data == 'not_delete':
                         reservation.status = 91
                         reservation.save()
