@@ -109,8 +109,8 @@ def callback(request):
 
                     for item in items:
                         for r in item.reservation_set.all():
-                                if r.uuid != reservation.uuid and not (r.return_date + timedelta(days=1) < reservation.start_date or reservation.return_date < r.start_date - timedelta(days=1)):
-                                    items = items.exclude(uuid=str(r.item.uuid))
+                            if r.uuid != reservation.uuid and not (r.return_date + timedelta(days=1) < reservation.start_date or reservation.return_date < r.start_date - timedelta(days=1)):
+                                items = items.exclude(uuid=str(r.item.uuid))
 
                 return items, text
 
