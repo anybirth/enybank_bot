@@ -7,13 +7,12 @@ import traceback
 from datetime import date, datetime, timedelta
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden, HttpResponseServerError
 from django.conf import settings
-from django.core.files import File
 from django.db.models import Q, Count
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.staticfiles.templatetags.staticfiles import static
 from linebot import LineBotApi, WebhookParser
 from linebot.exceptions import InvalidSignatureError, LineBotApiError
-from linebot.models import FollowEvent, PostbackEvent, MessageEvent, ImageMessage, ImageSendMessage, TextMessage, TextSendMessage, TemplateSendMessage, ButtonsTemplate, ConfirmTemplate, CarouselTemplate, CarouselColumn, ImageCarouselTemplate, ImageCarouselColumn, PostbackTemplateAction, DatetimePickerTemplateAction
+from linebot.models import FollowEvent, PostbackEvent, MessageEvent, TextMessage, ImageSendMessage, TextSendMessage, TemplateSendMessage, ButtonsTemplate, ConfirmTemplate, CarouselTemplate, CarouselColumn, ImageCarouselTemplate, ImageCarouselColumn, PostbackTemplateAction, DatetimePickerTemplateAction
 from main import models
 
 # Create your views here.
